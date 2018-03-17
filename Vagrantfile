@@ -49,14 +49,18 @@ Vagrant.configure("2") do |config|
     echo 'Install Docker CE'
     apt-get update
     apt-get install -y docker-ce
+    service docker start
+    
     DOCKER_COMPOSE_VERSION=1.18.0
     curl -sSL https://github.com/docker/compose/releases/download/${DOCKER_COMPOSE_VERSION}/docker-compose-`uname -s`-`uname -m` > /usr/local/bin/docker-compose
     chmod +x /usr/local/bin/docker-compose
     echo 'Add vagrant to docker group'
     usermod -aG docker vagrant
+    
     ls -al /var/run/docker.sock
     chgrp docker /var/run/docker.sock
     chmod 775 /var/run/docker.sock
+    
     if /usr/local/bin/bx > /dev/null
     then
       echo 'Updating Bluemix CLI'
@@ -65,17 +69,17 @@ Vagrant.configure("2") do |config|
       echo 'Installing Bluemix CLI'
       sh <(curl -fssSL https://clis.ng.bluemix.net/install/linux 2>/dev/null)
     fi
-    echo 'Installing maven'
+    
     cd /opt
+    echo 'Installing maven and Gradle'
     wget -q http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
     tar -xvzf apache-maven-3.3.9-bin.tar.gz
     mv apache-maven-3.3.9 maven 
     rm apache-maven-3.3.9-bin.tar.gz
-    cd /opt
+    
     wget -q https://services.gradle.org/distributions/gradle-4.5-bin.zip
     unzip gradle-4.5-bin.zip
     rm gradle-4.5-bin.zip
-    
 
     # create environment vars for all users.
     echo 'export M2_HOME=/opt/maven' | tee -a /etc/profile.d/maven.sh
@@ -84,8 +88,6 @@ Vagrant.configure("2") do |config|
     echo 'export PATH=${GRADLE_HOME}/bin:${PATH}' | tee -a /etc/profile.d/gradle.sh
     # Indicate this is a vagrant VM
     echo 'export DOCKER_MACHINE_NAME=vagrant' | tee -a /etc/profile.d/docker_machine.sh
-    
-    
   EOT
 
   # Run as vagrant user (not yet in docker group): bx plugins, profile script
