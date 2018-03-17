@@ -67,12 +67,12 @@ Vagrant.configure("2") do |config|
     fi
     echo 'Installing maven'
     cd /opt
-    wget http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
+    wget -q http://www-eu.apache.org/dist/maven/maven-3/3.3.9/binaries/apache-maven-3.3.9-bin.tar.gz
     tar -xvzf apache-maven-3.3.9-bin.tar.gz
     mv apache-maven-3.3.9 maven 
     rm apache-maven-3.3.9-bin.tar.gz
     cd /opt
-    wget https://services.gradle.org/distributions/gradle-4.5-bin.zip
+    wget -q https://services.gradle.org/distributions/gradle-4.5-bin.zip
     unzip gradle-4.5-bin.zip
     rm gradle-4.5-bin.zip
     
@@ -84,6 +84,8 @@ Vagrant.configure("2") do |config|
     echo 'export PATH=${GRADLE_HOME}/bin:${PATH}' | tee -a /etc/profile.d/gradle.sh
     # Indicate this is a vagrant VM
     echo 'export DOCKER_MACHINE_NAME=vagrant' | tee -a /etc/profile.d/docker_machine.sh
+    
+    
   EOT
 
   # Run as vagrant user (not yet in docker group): bx plugins, profile script
@@ -123,19 +125,29 @@ Vagrant.configure("2") do |config|
 
   # Run as vagrant user: Always start things
   config.vm.provision :shell, privileged: false, run: "always", :inline => <<-EOT
+    
+    # mimic lab setup
+    cd ~
+    if [ ! -d reactive-code-workshop ]; then
+      git clone https://github.com/IBM/reactive-code-workshop.git
+    fi
+    if [ ! -d lagom-java-chirper-example ]; then
+      git clone https://github.com/BarDweller/lagom-java-chirper-example.git
+    fi
+    if [ ! -d rxjava2-chirper-client ]; then
+      git clone https://github.com/BarDweller/rxjava2-chirper-client.git
+    fi
+    if [ ! -d webflux-chirper-client ]; then
+      git clone https://github.com/BarDweller/webflux-chirper-client.git
+    fi
+    
+    # Clear old locks in case of restarted provisioning
+    find  /home/vagrant/.ivy2 -name *.lock -delete
 
-    # Download and build lagom chirper
-    git clone https://github.com/BarDweller/lagom-java-chirper-example.git
-    cd lagom-java-chirper-example
-    wget -qO- https://raw.githubusercontent.com/creationix/nvm/v0.33.2/install.sh | bash
-    export NVM_DIR="$HOME/.nvm"
-    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-    nvm install --lts
-    sbt -DbuildTarget=compose clean docker:publishLocal    
-    cd deploy/compose
-    docker-compose build proxy
-    docker-compose pull
-    echo 'system is up, use vagrant ssh to access it.'
+    cp /vagrant/vscode.sh ~/vscode.sh
+    chmod +x ~/vscode.sh
+    
+    /vagrant/vmstartup.sh
   EOT
 
 end
