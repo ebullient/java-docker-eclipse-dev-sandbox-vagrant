@@ -9,6 +9,7 @@ Vagrant.configure("2") do |config|
     v.memory = 3072
     v.cpus = 2
     v.name = "Sandbox"
+    v.gui = true
   end
   #Note.. need to install xauth too!
   config.ssh.forward_x11 = true
@@ -35,6 +36,7 @@ Vagrant.configure("2") do |config|
       chromium-browser \
       open-vm-tools \
       open-vm-tools-desktop \
+      ubuntu-desktop \
       openjdk-8-jdk
     echo 'Set up HTTPS repository'
     apt-get install -y \
