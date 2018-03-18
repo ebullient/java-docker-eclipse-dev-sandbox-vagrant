@@ -3,22 +3,28 @@
 
 Vagrant.configure("2") do |config|
   config.vm.box = "bento/ubuntu-16.04"
+
   config.vm.define "Sandbox" do |vm|
   end
+
   config.vm.provider "virtualbox" do |v|
     v.memory = 3072
     v.cpus = 2
     v.name = "Sandbox"
-    v.gui = true
   end
+
   #Note.. need to install xauth too!
   config.ssh.forward_x11 = true
 
   #fix 'stdin is not a tty' output.
   config.vm.provision :shell, inline: "(grep -q -E '^mesg n$' /root/.profile && sed -i 's/^mesg n$/tty -s \\&\\& mesg n/g' /root/.profile && echo 'Ignore the previous error about stdin not being a tty. Fixing it now...') || exit 0;"
 
+  #forward port 9000 to the VM host, so we can access Chirper's webpage
+  config.vm.network(:forwarded_port, guest: 9000, host: 9000)
+
   # Run as Root -- install git, latest docker, bx cli
   config.vm.provision :shell, :inline => <<-EOT
+
     apt-get purge docker docker-engine docker.io
     echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
     apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv 2EE0EA64E40A89B84B2DF73499E82A75642AC823
@@ -36,18 +42,20 @@ Vagrant.configure("2") do |config|
       chromium-browser \
       open-vm-tools \
       open-vm-tools-desktop \
-      ubuntu-desktop \
-      openjdk-8-jdk
+      openjdk-8-jdk 
+
     echo 'Set up HTTPS repository'
     apt-get install -y \
         apt-transport-https \
         ca-certificates \
         software-properties-common
+
     curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
     add-apt-repository \
         "deb [arch=amd64] https://download.docker.com/linux/ubuntu \
         $(lsb_release -cs) \
         stable"
+
     echo 'Install Docker CE'
     apt-get update
     apt-get install -y docker-ce
@@ -120,17 +128,14 @@ Vagrant.configure("2") do |config|
       echo 'Installing Bluemix container-registry plugin'
       /usr/local/bin/bx plugin install container-registry -r Bluemix
     fi
+    
     # Enable Gradle Daemon
     mkdir -p /home/vagrant/.gradle
     touch /home/vagrant/.gradle/gradle.properties
-    echo "org.gradle.daemon=true" >> /home/vagrant/.gradle/gradle.properties
-
-  EOT
-
-  # Run as vagrant user: Always start things
-  config.vm.provision :shell, privileged: false, run: "always", :inline => <<-EOT
+    if ! grep "org.gradle.daemon=true" /home/vagrant/.gradle/gradle.properties; then
+      echo "org.gradle.daemon=true" >> /home/vagrant/.gradle/gradle.properties
+    fi
     
-    # mimic lab setup
     cd ~
     if [ ! -d reactive-code-workshop ]; then
       git clone https://github.com/IBM/reactive-code-workshop.git
@@ -150,7 +155,12 @@ Vagrant.configure("2") do |config|
 
     cp /vagrant/vscode.sh ~/vscode.sh
     chmod +x ~/vscode.sh
+  EOT
+
+  # Run as vagrant user: Always start things
+  config.vm.provision :shell, privileged: false, run: "always", :inline => <<-EOT
     
+    # mimic lab setup
     /vagrant/vmstartup.sh
   EOT
 
