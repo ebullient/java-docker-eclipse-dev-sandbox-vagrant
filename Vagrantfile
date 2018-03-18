@@ -24,6 +24,15 @@ Vagrant.configure("2") do |config|
 
   # Run as Root -- install git, latest docker, bx cli
   config.vm.provision :shell, :inline => <<-EOT
+  
+    # If the home directory is present in the current project (peer of Vagrantfile),
+    # use that as a bind mount atop of /home/vagrant
+    if [ -d /vagrant/home ]; then
+      mount --bind --verbose /vagrant/home /home/vagrant
+      if ! grep "/vagrant/home" /etc/fstab; then
+        echo "/vagrant/home /home/vagrant   none  bind  0 0" >> /etc/fstab
+      fi      
+    fi
 
     apt-get purge docker docker-engine docker.io
     echo "deb https://dl.bintray.com/sbt/debian /" | sudo tee -a /etc/apt/sources.list.d/sbt.list
